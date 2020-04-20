@@ -24,6 +24,7 @@ private:
 	HWND listbox;
 	HWND button;
 	HWND edit[3];
+	HWND delbutton;
 
 	contact contactBase;
 

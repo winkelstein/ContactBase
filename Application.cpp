@@ -23,6 +23,7 @@ void Application::onCreate()
 	this->listbox = CreateWindowA(WC_LISTBOXA, "ListBox", WS_CHILD | WS_VSCROLL | WS_BORDER | WS_VISIBLE | LBS_SORT, 0, 0, this->width/2, this->height - 39, this->windowHandler, nullptr, GetModuleHandleA(nullptr), 0);
 
 	this->button = CreateWindowA(WC_BUTTONA, "Add new contact", WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE, this->width / 2 + this->width / 7, this->height / 2 + this->height / 4, 150, 20, this->windowHandler, reinterpret_cast<HMENU>(0x1), GetModuleHandleA(nullptr), 0);
+	this->delbutton = CreateWindowA(WC_BUTTONA, "Delete contact", WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE, this->width / 2 + this->width / 7, this->height / 2 + this->height / 3, 150, 20, this->windowHandler, reinterpret_cast<HMENU>(0x2), GetModuleHandleA(nullptr), 0);
 
 	this->edit[0] = CreateWindowA(WC_EDITA, "", WS_CHILD | WS_VISIBLE | WS_BORDER, this->width / 2 + this->width / 9, this->height / 6, 200, 20, this->windowHandler, 0, GetModuleHandleA(nullptr), 0);
 	this->edit[1] = CreateWindowA(WC_EDITA, "", WS_CHILD | WS_VISIBLE | WS_BORDER, this->width / 2 + this->width / 9, this->height / 4, 200, 20, this->windowHandler, 0, GetModuleHandleA(nullptr), 0);
@@ -71,5 +72,19 @@ void Application::onCommand(HWND hWnd)
 			Application::uploadToListBox(this->listbox, this->contactBase);
 			for (unsigned short int i = 0; i < 3; i++) SetWindowTextA(this->edit[i], "");
 		}
+	}
+
+	if (hWnd == this->delbutton)
+	{
+		DWORD index = SendMessageA(this->listbox, LB_GETCURSEL, 0, 0);
+
+		SendMessageA(this->listbox, LB_DELETESTRING, index, 0);
+
+		auto t = this->contactBase.begin();
+		for (size_t i = 0; i < index; i++)
+		{
+			++t;
+		}
+		this->contactBase.erase(t);
 	}
 }
