@@ -69,8 +69,7 @@ void Application::onCommand(HWND hWnd)
 			this->contactBase[number] = std::pair<std::string, std::string>(name, lastname);
 			Application::uploadToFile("contactBase.db", this->contactBase);
 			Application::uploadToListBox(this->listbox, this->contactBase);
+			for (unsigned short int i = 0; i < 3; i++) SetWindowTextA(this->edit[i], "");
 		}
-
-		for (unsigned short int i = 0; i < 3; i++) SetWindowTextA(this->edit[i], "");
 	}
 }
