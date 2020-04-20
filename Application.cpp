@@ -52,10 +52,24 @@ void Application::onCommand(HWND hWnd)
 		GetWindowTextA(this->edit[2], buffer, 64);
 		number = buffer;
 
-		if (name.empty() || lastname.empty() || number.empty()) MessageBoxA(this->windowHandler, "Enter valid data!", "Some error occured", MB_OK | MB_ICONERROR);
-		else if (MessageBoxA(this->windowHandler, (name + " " + lastname).c_str(), "Are you really want to add new number?", MB_YESNO | MB_ICONQUESTION) == IDYES) this->contactBase[number] = std::pair<std::string, std::string>(name, lastname);
-		Application::uploadToFile("contactBase.db", this->contactBase);
-		Application::uploadToListBox(this->listbox, this->contactBase);
+		unsigned short a = false;
+		for (unsigned short i = 0; i < number.length(); i++)
+		{
+			if (number[i] == '+') continue;
+
+			if (!isdigit(number[i])) break;
+			else a++;
+		}
+
+		if (name.empty() || lastname.empty() || number.empty() || a != number.length()-1) MessageBoxA(this->windowHandler, "Enter valid data!", "Some error occured", MB_OK | MB_ICONERROR);
+		else if (MessageBoxA(this->windowHandler, (name + " " + lastname).c_str(), "Are you really want to add new number?", MB_YESNO | MB_ICONQUESTION) == IDYES)
+		{
+			for (size_t i = 0; i < name.length(); i++) if (name[i] == ' ') name[i] = '\255';
+			for (size_t i = 0; i < lastname.length(); i++) if (lastname[i] == ' ') lastname[i] = '\255';
+			this->contactBase[number] = std::pair<std::string, std::string>(name, lastname);
+			Application::uploadToFile("contactBase.db", this->contactBase);
+			Application::uploadToListBox(this->listbox, this->contactBase);
+		}
 
 		for (unsigned short int i = 0; i < 3; i++) SetWindowTextA(this->edit[i], "");
 	}
