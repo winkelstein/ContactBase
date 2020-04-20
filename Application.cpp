@@ -79,7 +79,7 @@ void Application::onCommand(HWND hWnd)
 		std::string number;
 		DWORD index = SendMessageA(this->listbox, LB_GETCURSEL, 0, 0);
 		
-		if ((long)index >= 0 && MessageBoxA(this->windowHandler, "Delete contact", "Are you really want to delete selected contact?", MB_YESNO) == IDYES)
+		if ((long)index >= 0 && MessageBoxA(this->windowHandler, "Are you really want to delete selected contact?", "Delete contact", MB_YESNO) == IDYES)
 		{
 			char buffer[64];
 			SendMessageA(this->listbox, LB_GETTEXT, index, (LPARAM)buffer);
