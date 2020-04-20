@@ -62,8 +62,8 @@ void Application::onCommand(HWND hWnd)
 			else a++;
 		}
 
-		if (name.empty() || lastname.empty() || number.empty() || a != number.length()-1) MessageBoxA(this->windowHandler, "Enter valid data!", "Some error occured", MB_OK | MB_ICONERROR);
-		else if (MessageBoxA(this->windowHandler, (name + " " + lastname).c_str(), "Are you really want to add new number?", MB_YESNO | MB_ICONQUESTION) == IDYES)
+		if (name.empty() || lastname.empty() || number.empty() || a != number.length()-1 || number[0] != '+') MessageBoxA(this->windowHandler, "Enter valid data!", "Some error occured", MB_OK | MB_ICONERROR);
+		else if (MessageBoxA(this->windowHandler, (name + " " + lastname).c_str(), "Are you really want to add this contact?", MB_YESNO | MB_ICONQUESTION) == IDYES)
 		{
 			for (size_t i = 0; i < name.length(); i++) if (name[i] == ' ') name[i] = '\255';
 			for (size_t i = 0; i < lastname.length(); i++) if (lastname[i] == ' ') lastname[i] = '\255';
@@ -76,15 +76,20 @@ void Application::onCommand(HWND hWnd)
 
 	if (hWnd == this->delbutton)
 	{
+		std::string number;
 		DWORD index = SendMessageA(this->listbox, LB_GETCURSEL, 0, 0);
-
-		SendMessageA(this->listbox, LB_DELETESTRING, index, 0);
-
-		auto t = this->contactBase.begin();
-		for (size_t i = 0; i < index; i++)
+		
+		if ((long)index >= 0 && MessageBoxA(this->windowHandler, "Delete contact", "Are you really want to delete selected contact?", MB_YESNO) == IDYES)
 		{
-			++t;
+			char buffer[64];
+			SendMessageA(this->listbox, LB_GETTEXT, index, (LPARAM)buffer);
+			number = buffer;
+			
+			number = number.substr(number.find('+'));
+
+			this->contactBase.erase(number);
+
+			SendMessageA(this->listbox, LB_DELETESTRING, index, 0);
 		}
-		this->contactBase.erase(t);
 	}
 }
