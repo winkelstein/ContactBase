@@ -1,6 +1,43 @@
 #include "Application.h"
 
-LRESULT WINAPI Application::ApplicationProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+void Application::createWindowClass()
+{
+	WNDCLASSEXA wcex;
+
+	wcex.cbSize = sizeof(WNDCLASSEXA);
+	wcex.lpfnWndProc = Application::WndProc; //this static function will call none-static ApplicationProc class method
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = GetModuleHandleA(nullptr);
+	wcex.hIcon = LoadIconW(wcex.hInstance, IDI_APPLICATION); //YOUR ICON
+	wcex.hIconSm = LoadIconW(wcex.hInstance, IDI_APPLICATION); //SAME BUT SMALLER
+	wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+	wcex.hCursor = LoadCursorW(wcex.hInstance, IDC_ARROW);
+	wcex.lpszClassName = "ApplicationClass";
+	wcex.lpszMenuName = nullptr;
+	wcex.style = CS_VREDRAW | CS_HREDRAW;
+
+	if (!RegisterClassExA(&wcex))
+	{
+		throw std::exception("Unable to create window class");
+	}
+}
+
+void Application::createNativeWindow(std::string name, unsigned width, unsigned height)
+{
+	this->window = CreateWindowA("ApplicationClass", name.c_str(), WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, width, height, nullptr, nullptr, GetModuleHandleA(nullptr), this);
+
+	if (!this->window)
+	{
+		throw std::exception("Unable to create window");
+		this->~Application();
+	}
+
+	ShowWindow(this->window, SW_SHOW);
+	UpdateWindow(this->window);
+}
+
+LRESULT __stdcall Application::ApplicationProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
@@ -18,19 +55,46 @@ LRESULT WINAPI Application::ApplicationProc(HWND hWnd, UINT message, WPARAM wPar
 	return DefWindowProcA(hWnd, message, wParam, lParam);
 }
 
+void Application::uploadFromDB()
+{
+	sqlite3_stmt* statement = nullptr;
+	sqlite3_prepare_v3(db, "SELECT * FROM contact", -1, 0, &statement, 0);
+
+	while (sqlite3_step(statement) != SQLITE_DONE)
+	{
+		Contact contact;
+		contact.deserialize(statement);
+		this->contacts.push_back(contact);
+	}
+}
+
+void Application::uploadToDB(const Contact& contact)
+{
+	contact.serialize(this->db);
+}
+
+void Application::uploadToListBox()
+{
+	std::string buffer;
+
+	SendMessageA(listbox, LB_RESETCONTENT, 0, 0);
+
+	for (auto& t : this->contacts)
+	{
+		buffer = t.phone() + "  " + t.name();
+		SendMessageA(listbox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(buffer.c_str()));
+	}
+}
+
 void Application::onCreate()
 {
-	this->listbox = CreateWindowA(WC_LISTBOXA, "ListBox", WS_CHILD | WS_VSCROLL | WS_BORDER | WS_VISIBLE | LBS_SORT, 0, 0, this->width/2, this->height - 39, this->windowHandler, nullptr, GetModuleHandleA(nullptr), 0);
+	this->listbox = CreateWindowA(WC_LISTBOXA, "ListBox", WS_CHILD | WS_VSCROLL | WS_BORDER | WS_VISIBLE | LBS_SORT, 0, 0, this->width / 2, this->height - 39, this->window, nullptr, GetModuleHandleA(nullptr), 0);
 
-	this->button = CreateWindowA(WC_BUTTONA, "Add new contact", WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE, this->width / 2 + this->width / 7, this->height / 2 + this->height / 4, 150, 20, this->windowHandler, reinterpret_cast<HMENU>(0x1), GetModuleHandleA(nullptr), 0);
-	this->delbutton = CreateWindowA(WC_BUTTONA, "Delete contact", WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE, this->width / 2 + this->width / 7, this->height / 2 + this->height / 3, 150, 20, this->windowHandler, reinterpret_cast<HMENU>(0x2), GetModuleHandleA(nullptr), 0);
+	this->button = CreateWindowA(WC_BUTTONA, "Add new contact", WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE, this->width / 2 + this->width / 7, this->height / 2 + this->height / 4, 150, 20, this->window, reinterpret_cast<HMENU>(0x1), GetModuleHandleA(nullptr), 0);
 
-	this->edit[0] = CreateWindowA(WC_EDITA, "", WS_CHILD | WS_VISIBLE | WS_BORDER, this->width / 2 + this->width / 9, this->height / 6, 200, 20, this->windowHandler, 0, GetModuleHandleA(nullptr), 0);
-	this->edit[1] = CreateWindowA(WC_EDITA, "", WS_CHILD | WS_VISIBLE | WS_BORDER, this->width / 2 + this->width / 9, this->height / 4, 200, 20, this->windowHandler, 0, GetModuleHandleA(nullptr), 0);
-	this->edit[2] = CreateWindowA(WC_EDITA, "", WS_CHILD | WS_VISIBLE | WS_BORDER, this->width / 2 + this->width / 9, this->height / 2, 200, 20, this->windowHandler, 0, GetModuleHandleA(nullptr), 0);
-
-	Application::uploadToMap("contactBase.db", this->contactBase);
-	Application::uploadToListBox(this->listbox, this->contactBase);
+	this->edit[0] = CreateWindowA(WC_EDITA, "", WS_CHILD | WS_VISIBLE | WS_BORDER, this->width / 2 + this->width / 9, this->height / 6, 200, 20, this->window, 0, GetModuleHandleA(nullptr), 0);
+	this->edit[1] = CreateWindowA(WC_EDITA, "", WS_CHILD | WS_VISIBLE | WS_BORDER, this->width / 2 + this->width / 9, this->height / 4, 200, 20, this->window, 0, GetModuleHandleA(nullptr), 0);
+	this->edit[2] = CreateWindowA(WC_EDITA, "", WS_CHILD | WS_VISIBLE | WS_BORDER, this->width / 2 + this->width / 9, this->height / 2, 200, 20, this->window, 0, GetModuleHandleA(nullptr), 0);
 }
 
 void Application::onClose()
@@ -62,34 +126,88 @@ void Application::onCommand(HWND hWnd)
 			else a++;
 		}
 
-		if (name.empty() || lastname.empty() || number.empty() || a != number.length()-1 || number[0] != '+') MessageBoxA(this->windowHandler, "Enter valid data!", "Some error occured", MB_OK | MB_ICONERROR);
-		else if (MessageBoxA(this->windowHandler, (name + " " + lastname).c_str(), "Are you really want to add this contact?", MB_YESNO | MB_ICONQUESTION) == IDYES)
+		if (name.empty() || lastname.empty() || number.empty() || a != number.length() - 1 || number[0] != '+') MessageBoxA(this->window, "Enter valid data!", "Some error occured", MB_OK | MB_ICONERROR);
+		else if (MessageBoxA(this->window, (name + " " + lastname).c_str(), "Are you really want to add this contact?", MB_YESNO | MB_ICONQUESTION) == IDYES)
 		{
 			for (size_t i = 0; i < name.length(); i++) if (name[i] == ' ') name[i] = '\255';
 			for (size_t i = 0; i < lastname.length(); i++) if (lastname[i] == ' ') lastname[i] = '\255';
-			this->contactBase[number] = std::pair<std::string, std::string>(name, lastname);
-			Application::uploadToFile("contactBase.db", this->contactBase);
-			Application::uploadToListBox(this->listbox, this->contactBase);
+			
+			this->contacts.push_back(Contact(number, name + ' ' + lastname));
+			Application::uploadToDB(this->contacts.front());
+			Application::uploadToListBox();
 			for (unsigned short int i = 0; i < 3; i++) SetWindowTextA(this->edit[i], "");
 		}
 	}
+}
 
-	if (hWnd == this->delbutton)
+LRESULT __stdcall Application::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	Application* pApp;
+	if (msg == WM_NCCREATE)
 	{
-		std::string number;
-		DWORD index = SendMessageA(this->listbox, LB_GETCURSEL, 0, 0);
-		
-		if ((long)index >= 0 && MessageBoxA(this->windowHandler, "Are you really want to delete selected contact?", "Delete contact", MB_YESNO) == IDYES)
+		pApp = static_cast<Application*>(reinterpret_cast<CREATESTRUCTA*>(lParam)->lpCreateParams);
+
+		if (!SetWindowLongPtrA(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pApp)))
 		{
-			char buffer[64];
-			SendMessageA(this->listbox, LB_GETTEXT, index, (LPARAM)buffer);
-			number = buffer;
-			
-			number = number.substr(number.find('+'));
+			if (GetLastError()) MessageBoxA(nullptr, "SetWindowLongPtrA error", "Some error occured", MB_OK);
+		}
+	}
+	else
+	{
+		pApp = reinterpret_cast<Application*>(GetWindowLongPtrA(hWnd, GWLP_USERDATA));
+	}
 
-			this->contactBase.erase(number);
+	if (pApp)
+	{
+		pApp->window = hWnd;
+		return pApp->ApplicationProc(hWnd, msg, wParam, lParam);
+	}
 
-			SendMessageA(this->listbox, LB_DELETESTRING, index, 0);
+	return DefWindowProcA(hWnd, msg, wParam, lParam);
+}
+
+Application::Application(std::string window_name, unsigned width, unsigned height) : width(width), height(height)
+{
+	try
+	{
+		this->createWindowClass();
+		this->createNativeWindow(window_name, width, height);
+	}
+	catch (std::exception& e)
+	{
+		MessageBoxA(NULL, e.what(), "Some error occured", MB_OK);
+		this->~Application();
+	}
+
+	if (sqlite3_open("database.db", &this->db))
+		this->~Application();
+
+	std::string query = "CREATE TABLE IF NOT EXISTS contact(phone VARCHAR, name VARCHAR);";
+
+	if (sqlite3_exec(this->db, query.c_str(), 0, 0, 0))
+		this->~Application();
+
+	this->uploadFromDB();
+	this->uploadToListBox();
+}
+
+Application::~Application()
+{
+	sqlite3_close(this->db);
+	UnregisterClassA("ApplicationClass", GetModuleHandleA(nullptr));
+}
+
+void Application::run()
+{
+	MSG msg;
+	this->isWorking = true;
+
+	while (this->isWorking)
+	{
+		if (PeekMessageA(&msg, this->window, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessageA(&msg);
 		}
 	}
 }

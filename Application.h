@@ -3,49 +3,53 @@
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-#include <Windows.h>
-#include <CommCtrl.h>
 #include <string>
 #include <fstream>
-#include <map>
+#include <vector>
 #include <exception>
 
-typedef std::map<std::string, std::pair<std::string, std::string>> contact; //map of phone number and pair of name, lastname
+#include <Windows.h>
+#include <CommCtrl.h>
+
+#include <sqlite/sqlite3.h>
+
+#include "Contact.h"
 
 class Application
 {
 private:
-	//data:
-	HWND windowHandler;
-	std::string className = "Application";
+	HWND window;
 	bool isWorking;
 	unsigned width, height;
 
 	HWND listbox;
 	HWND button;
 	HWND edit[3];
-	HWND delbutton;
 
-	contact contactBase;
+	sqlite3* db;
 
-	//functions:
-	void CreateWindowClass();
-	void CreateNativeWindow(std::string windowname, unsigned width, unsigned height);
-	static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	std::vector<Contact> contacts;
+
+private:
+	void createWindowClass();
+	void createNativeWindow(std::string name, unsigned width, unsigned height);
 	LRESULT WINAPI ApplicationProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	static void uploadToMap(std::string filepath, contact& map);
-	static void uploadToFile(std::string filepath, contact& map);
 
-	static void uploadToListBox(HWND listbox, contact& map);
+	void uploadFromDB();
+	void uploadToDB(const Contact& contact);
+	void uploadToListBox();
 
-	//methods:
+
 	void onCreate();
 	void onClose();
 	void onCommand(HWND hWnd);
+
+private:
+	static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 public:
-	Application(std::string windowname, unsigned width, unsigned height);
+	Application(std::string window_name, unsigned width, unsigned height);
 	~Application();
 
 	void run();
 };
-
